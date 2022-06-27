@@ -56,6 +56,16 @@ app.get('/appointment', async(req, res) => {
    res.send(booking);
 })
 
+//Data for doctor appointment
+app.get('/patientAppointment', async(req, res) => {
+  const email = req.query.email;
+  console.log(email);
+    const query = {doctorEmail: email};
+    const cursor = bookingCollection.find(query);
+    const booking  = await cursor.toArray();
+   res.send(booking);
+})
+
 
 
 app.get('/booking',  async (req, res) => {
@@ -79,8 +89,45 @@ app.post('/report', async( req, res) => {
   })
 
 
+//Patient Reports for doctors
+app.get('/patientReport', async(req, res) => {
+  const email = req.query.email;
+  console.log(email);
+    const query = {doctorEmail: email};
+    const cursor = reportCollection.find(query);
+    const patientReport  = await cursor.toArray();
+   res.send(patientReport);
+})
 
 
+//Patient Reports for patient
+app.get('/userReport', async(req, res) => {
+  const email = req.query.email;
+  console.log(email);
+    const query = {patientEmail: email};
+    const cursor = reportCollection.find(query);
+    const userReport  = await cursor.toArray();
+   res.send(userReport);
+})
+
+//Reports for Diagnostic Center dashboard
+app.get('/diagnosticCenter', async(req, res) => {
+  const email = req.query.email;
+  console.log(email);
+    const query = {diagnosticCenter: email};
+    const cursor = reportCollection.find(query);
+    const diagnosticCenter  = await cursor.toArray();
+   res.send(diagnosticCenter);
+})
+
+//Doctor Details
+app.get('/doctorDetails', async(req, res) => {
+  const email = req.query.email;
+    const query = {email: email};
+    const cursor = dataCollection.find(query);
+    const doctorDetails  = await cursor.toArray();
+   res.send(doctorDetails);
+})
 
 
 }
