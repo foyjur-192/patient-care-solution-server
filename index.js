@@ -22,6 +22,7 @@ try{
     const bookingCollection = client.db('doctor-details').collection('booking')
     const patientsCollection = client.db('doctor-details').collection('patients')
     const reportCollection = client.db('doctor-details').collection('report')
+    const prescriptionCollection = client.db('doctor-details').collection('prescription')
 
  //Api Naming Convention
 
@@ -79,7 +80,7 @@ app.get('/booking',  async (req, res) => {
 //Report Delivery
 app.post('/report', async( req, res) => {
   const report = req.body;
- const query = {reports: report.reports, date:report.date, patientName: report.patient}  //cannot take same service several time
+ const query = {reports: report.reports, date: report.date, patientName: report.patientName}  //cannot take same service several time
  const exists = await reportCollection.findOne(query)
  if(exists){
    return res.send({success: false, report: exists})
@@ -87,6 +88,35 @@ app.post('/report', async( req, res) => {
  const result = await reportCollection.insertOne(report);
   return res.send({success: true, result});
   })
+
+
+
+//Prescription
+app.post('/prescriptionData', async( req, res) => {
+  const prescriptionData = req.body;
+ const query = {prescriptions: prescriptionData.prescriptions, date:prescriptionData.date, patient: prescriptionData.patient}  //cannot take same service several time
+ const exists = await prescriptionCollection.findOne(query)
+ if(exists){
+   return res.send({success: false, report: exists})
+ }
+ const result = await prescriptionCollection.insertOne(prescriptionData);
+  return res.send({success: true, result});
+  })
+
+//Prescription for patient
+app.get('/prescriptionMedicine', async(req, res) => {
+  const email = req.query.email;
+    const query = {patientEmail: email};
+    const cursor = prescriptionCollection.find(query);
+    const doctorDetails  = await cursor.toArray();
+   res.send(doctorDetails);
+})
+
+
+
+
+
+
 
 
 //Patient Reports for doctors
@@ -128,6 +158,29 @@ app.get('/doctorDetails', async(req, res) => {
     const doctorDetails  = await cursor.toArray();
    res.send(doctorDetails);
 })
+
+
+//Patient data get
+app.get('/patientData', async(req, res) => {
+  const email = req.query.email;
+    const query = {email: email};
+    const cursor = patientsCollection.find(query);
+    const patientData  = await cursor.toArray();
+   res.send(patientData);
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 }
