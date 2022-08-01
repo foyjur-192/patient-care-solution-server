@@ -1,12 +1,28 @@
-const express = require('express')
+const express = require('express');
 const cors = require('cors');
+
+
 const { MongoClient, ServerApiVersion } = require('mongodb');
 require('dotenv').config();
 const app = express();
+
+
 const port = process.env.PORT || 5000;
+
+//Body Parser
+
+// const fileUpload = require('express-fileupload');
+// app.use(bodyParser.urlencoded({ extended: false }))
+// app.use(bodyParser.json());
+
 
 app.use(cors());
 app.use(express.json());
+
+
+
+
+
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.8ik9x.mongodb.net/?retryWrites=true&w=majority` ;
 
@@ -23,6 +39,8 @@ try{
     const patientsCollection = client.db('doctor-details').collection('patients')
     const reportCollection = client.db('doctor-details').collection('report')
     const prescriptionCollection = client.db('doctor-details').collection('prescription')
+    const pressureDataCollection = client.db('doctor-details').collection('bloodPressure')
+    const heartDataCollection = client.db('doctor-details').collection('heartProblem')
 
  //Api Naming Convention
 
@@ -78,9 +96,21 @@ app.get('/booking',  async (req, res) => {
 
 
 //Report Delivery
+// const fileUpload = require('express-fileupload')
+// app.use(fileUpload({
+// useTempFiles: true,
+// tempFileDir: 'reportCollection'
+
+// }))
+
+
+
+
+
+
 app.post('/report', async( req, res) => {
   const report = req.body;
- const query = {reports: report.reports, date: report.date, patientName: report.patientName}  //cannot take same service several time
+ const query = {reports: report.reports, time: report.time, patientName: report.patientName}  //cannot take same service several time
  const exists = await reportCollection.findOne(query)
  if(exists){
    return res.send({success: false, report: exists})
@@ -102,6 +132,23 @@ app.post('/prescriptionData', async( req, res) => {
  const result = await prescriptionCollection.insertOne(prescriptionData);
   return res.send({success: true, result});
   })
+
+  app.get('/dataForSearch',  async (req, res) => {
+    const query = {};
+    const cursor = prescriptionCollection.find(query);
+    const dataForSearch = await cursor.toArray();
+    res.send(dataForSearch);
+  });
+
+
+
+
+
+
+
+
+
+
 
 //Prescription for patient
 app.get('/prescriptionMedicine', async(req, res) => {
@@ -170,13 +217,43 @@ app.get('/patientData', async(req, res) => {
 })
 
 
+//Blood Pressure Data
+
+//Add data to database
+app.post("/pressureData", async(req, res) => {
+  const pressureData = req.body;
+  const result = await pressureDataCollection.insertOne(pressureData);
+  res.send({success: true,  result});
+})
 
 
 
+//get Blood Pressure Data
+app.get('/pressureData', async(req, res) => {
+  const email = req.query.email;
+    const query = {email: email};
+    const cursor = pressureDataCollection.find(query);
+    const pressureData  = await cursor.toArray();
+   res.send(pressureData);
+})
 
 
 
+  //Heart problem update
+  app.post("/heartData", async(req, res) => {
+    const heartData = req.body;
+    const result = await heartDataCollection.insertOne(heartData);
+    res.send({success: true,  result});
+    })
 
+//get Blood Pressure Data
+app.get('/heartData', async(req, res) => {
+  const email = req.query.email;
+    const query = {email: email};
+    const cursor = heartDataCollection.find(query);
+    const heartData  = await cursor.toArray();
+   res.send(heartData);
+})
 
 
 
