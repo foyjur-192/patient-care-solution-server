@@ -1,11 +1,10 @@
 const express = require('express');
 const cors = require('cors');
-
-
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const jwt = require('jsonwebtoken');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 require('dotenv').config();
 const app = express();
-
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 
 const port = process.env.PORT || 5000;
 
@@ -20,14 +19,42 @@ app.use(cors());
 app.use(express.json());
 
 
+// JWT Function
+
+function verifyJWT (req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) {
+   return res.status(401).send({ message: 'UnAuthorized access' });
+    }
+  const token = authHeader.split(' ')[1];
+ jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, function (err, decoded) {
+    if (err) {
+       return res.status(403).send({message: 'Forbidden access'})
+     }
+   req.decoded = decoded;
+     next();
+   });
+}
 
 
 
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.8ik9x.mongodb.net/?retryWrites=true&w=majority` ;
-
-
 const client = new MongoClient(uri, { useNewUrlParser: true, useUnifiedTopology: true, serverApi: ServerApiVersion.v1 }); 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 async function run(){
 
@@ -43,14 +70,93 @@ try{
     const heartDataCollection = client.db('doctor-details').collection('heartProblem')
 
  //Api Naming Convention
+// Verify Admin
+// const verifyAdmin = async (req, res, next) => {
+//   const requester = req.decoded.email;
+//   const requesterAccount = await patientsCollection.findOne({ email: requester });
+//   if (requesterAccount.role === 'admin') {
+//     next();
+//   }
+//   else {
+//     res.status(403).send({ message: 'forbidden' });
+//   }
+// }
+
+//Get Admin
+app.get('/admin/:email', verifyJWT, async(req, res) => {
+  const email = req.params.email;
+  const user = await patientsCollection.findOne({email: email});
+  const isAdmin = user.role === 'admin';
+  res.send({admin: isAdmin});
+})
+
+
+
+//Make Admin
+
+  app.put('/users/admin/:email',verifyJWT, async (req, res) => {
+    const email = req.params.email;
+   const requester = req.decoded.email;
+   const requesterAccount = await patientsCollection.findOne({email: requester})
+  if(requesterAccount.role === 'admin'){
+    const filter = { email: email };
+    const updateDoc = {
+      $set: { role: 'admin' },
+    };
+    const result = await patientsCollection.updateOne(filter, updateDoc);
+    res.send(result);
+  }
+  else{
+    res.status(403).send({message: 'forbidden access'});
+  }
+   
+  })
+
+  // app.put('/users/admin/:email', verifyJWT, async (req, res) => {
+  //   const email = req.params.email;
+  //   const filter = { email: email };
+  //   const updateDoc = {
+  //     $set: { role: 'admin' },
+  //   };
+  //   const result = await patientsCollection.updateOne(filter, updateDoc);
+  //   res.send(result);
+  // })
+
+
+
+
+//User Added
+app.put('/users/:email', async(req, res) => {
+  const email = req.params.email;
+  const user = req.body;
+  const filter = {email: email};
+  const options = { upsert: true};
+  const updateDoc = {
+    $set: user,
+  };
+  const result = await patientsCollection.updateOne(filter, updateDoc, options);
+  const token = jwt.sign({email:email}, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+  res.send({result, token});
+  
+  
+  })
+
+
 
     //Doctor Data
-    app.get('/data',  async (req, res) => {
-        const query = {};
-        const cursor = dataCollection.find(query);
-        const data = await cursor.toArray();
-        res.send(data);
+    app.get('/users',verifyJWT, async (req, res) => {
+      const users = await patientsCollection.find().toArray();
+      res.send(users);
     });
+
+    //Doctors
+    app.get('/data', async (req, res) => {
+      const users = await dataCollection.find().toArray();
+      res.send(users);
+    });
+    
+
+   
 
 //Appointments objects
    app.post('/booking', async( req, res) => {
@@ -85,6 +191,22 @@ app.get('/patientAppointment', async(req, res) => {
    res.send(booking);
 })
 
+
+app.get('/userData', async(req, res) => {
+  const email = req.query.email;
+  console.log(email);
+    const query = {email: email};
+    const cursor = dataCollection.find(query);
+    const price  = await cursor.toArray();
+   res.send(price);
+})
+
+app.get('/priceData/:id', async(req, res) =>{
+  const id = req.params.id;
+  const query = {_id: ObjectId(id)};
+  const priceData = await dataCollection.findOne(query);
+  res.send(priceData);
+})
 
 
 app.get('/booking',  async (req, res) => {
@@ -142,7 +264,13 @@ app.post('/prescriptionData', async( req, res) => {
 
 
 
-
+//Payment get
+// app.get('/payment/:id', async(req, res) =>{
+// const id = req.params.id;
+// const query = {_id: ObjectId(id)};
+// const payment = await dataCollection.findOne(query);
+// res.send(payment);
+// })
 
 
 
@@ -178,13 +306,16 @@ app.get('/patientReport', async(req, res) => {
 
 
 //Patient Reports for patient
-app.get('/userReport', async(req, res) => {
+app.get('/userReport',verifyJWT, async(req, res) => {
   const email = req.query.email;
-  console.log(email);
+   const decodedEmail = req.decoded.email;
+   if(email === decodedEmail){
     const query = {patientEmail: email};
     const cursor = reportCollection.find(query);
     const userReport  = await cursor.toArray();
    res.send(userReport);
+   }
+    
 })
 
 //Reports for Diagnostic Center dashboard
@@ -220,9 +351,44 @@ app.get('/patientData', async(req, res) => {
 //Blood Pressure Data
 
 //Add data to database
-app.post("/pressureData", async(req, res) => {
-  const pressureData = req.body;
-  const result = await pressureDataCollection.insertOne(pressureData);
+// app.post("/pressureData", async(req, res) => {
+//   const pressureData = req.body;
+//   const result = await pressureDataCollection.insertOne(pressureData);
+//   res.send({success: true,  result});
+// })
+
+app.put('/pressureData/:id', async (req, res) => {
+  const id = req.params.id;
+  console.log(id);
+  const updatedQuantity = req.body;
+  console.log(updatedQuantity);
+  const filter = { _id: ObjectId(id) };
+  const options = { upsert: true };
+  const updatedValue = {
+      "$set": {updatedQuantity}
+  };
+  console.log(updatedValue);
+  const result = await pressureDataCollection.updateOne(filter, updatedValue, options);
+  res.send(result);
+
+})
+
+
+
+
+
+
+
+
+
+
+
+
+
+//Add data to database
+app.post("/data", async(req, res) => {
+  const data = req.body;
+  const result = await dataCollection.insertOne(data);
   res.send({success: true,  result});
 })
 
@@ -237,7 +403,20 @@ app.get('/pressureData', async(req, res) => {
    res.send(pressureData);
 })
 
+//Stripe Payment
+// app.post('/create-payment-intent', async(req, res) => {
+// const service = req.body;
+// const price = service.price;
+// const amount = price*100;
+// const paymentIntent = await stripe.paymentIntents.create({
+//   amount: amount,
+//   currency: 'usd',
+//   payment_method_types:['card']
+// });
 
+// res.send({clientSecret: paymentIntent.client_secret,
+// });
+// });
 
   //Heart problem update
   app.post("/heartData", async(req, res) => {
