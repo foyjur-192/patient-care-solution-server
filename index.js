@@ -361,24 +361,45 @@ app.get('/patientData', async(req, res) => {
 //   res.send({success: true,  result});
 // })
 
-app.put('/pressureData/:id', async (req, res) => {
+// app.put('/pressureData/:id', async (req, res) => {
+//   const id = req.params.id;
+//   console.log(id);
+//   const updatedQuantity = req.body;
+//   console.log(updatedQuantity);
+//   const filter = { _id: ObjectId(id) };
+//   const options = { upsert: true };
+//   const updatedValue = {
+//       "$set": {updatedQuantity.update}
+//   };
+//   console.log(updatedValue);
+//   const result = await pressureDataCollection.updateOne(filter, updatedValue, options);
+//   res.send(result);
+// })
+
+// app.put("/pressureData/:id", async(req, res) => {
+//   const id = req.params.id;
+//   const pressureData = req.body;
+//   const filter = {_id: ObjectId(id)};
+//   const options = { upsert: true};
+//   const updateDoc = {
+//   $set: {
+//       update: pressureData.update
+//   }
+  
+//   };
+//   const result = await pressureDataCollection.updateOne(filter, updateDoc, options)
+//   res.send(result);
+  
+//   })
+
+
+//Delete user
+app.delete("/deleteAppointment/:id", async (req, res) => {
   const id = req.params.id;
-  console.log(id);
-  const updatedQuantity = req.body;
-  console.log(updatedQuantity);
   const filter = { _id: ObjectId(id) };
-  const options = { upsert: true };
-  const updatedValue = {
-      "$set": {updatedQuantity}
-  };
-  console.log(updatedValue);
-  const result = await pressureDataCollection.updateOne(filter, updatedValue, options);
+  const result = await bookingCollection.deleteOne(filter);
   res.send(result);
-
-})
-
-
-
+});
 
 
 
@@ -428,6 +449,17 @@ app.get('/pressureData', async(req, res) => {
     const pressureData  = await cursor.toArray();
    res.send(pressureData);
 })
+
+// app.get("/pressureUpdate/:id", async(req, resp) => {
+//   let result = await pressureDataCollection.findOne({_id:req.params.id})
+//   if(result){
+//     resp.send(result)
+//   }else{
+//     resp.send({"result":"No result found"})
+//   }
+
+
+// })
 
 //Stripe Payment
 // app.post('/create-payment-intent', async(req, res) => {
