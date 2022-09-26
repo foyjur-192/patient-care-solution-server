@@ -148,6 +148,10 @@ app.put('/users/:email', async(req, res) => {
       const users = await patientsCollection.find().toArray();
       res.send(users);
     });
+    app.get('/users',verifyJWT, async (req, res) => {
+      const users = await patientsCollection.find().toArray();
+      res.send(users);
+    });
 
     //Doctors
     app.get('/data', async (req, res) => {
@@ -386,11 +390,33 @@ app.put('/pressureData/:id', async (req, res) => {
 
 
 //Add data to database
-app.post("/data", async(req, res) => {
-  const data = req.body;
-  const result = await dataCollection.insertOne(data);
-  res.send({success: true,  result});
-})
+// app.post("/data", async(req, res) => {
+//   const data = req.body;
+//   const result = await dataCollection.insertOne(data);
+//   res.send({success: true,  result});
+// })
+
+app.post('/newData', async( req, res) => {
+  const newData = req.body;
+ const query = {doctorData: newData.doctorData, date:newData.date, doctorName: newData.doctorName}  //cannot take same service several time
+ const exists = await dataCollection.findOne(query)
+ if(exists){
+   return res.send({success: false, newData: exists})
+ }
+ const result = await dataCollection.insertOne(newData);
+  return res.send({success: true, result});
+  })
+
+// app.post('/newData', async( req, res) => {
+//   const booking = req.body;
+//  const query = {appointment: booking.appointment, date:booking.date, patient: booking.patient}  //cannot take same service several time
+//  const exists = await bookingCollection.findOne(query)
+//  if(exists){
+//    return res.send({success: false, booking: exists})
+//  }
+//  const result = await bookingCollection.insertOne(booking);
+//   return res.send({success: true, result});
+//   })
 
 
 
