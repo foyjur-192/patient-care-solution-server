@@ -125,7 +125,7 @@ app.get('/admin/:email', verifyJWT, async(req, res) => {
 
 
 
-//User Added
+//User 
 app.put('/users/:email', async(req, res) => {
   const email = req.params.email;
   const user = req.body;
